@@ -64,13 +64,14 @@ public class AttendanceFrame extends JFrame {
     private final JPanel statusPanel = new JPanel(new BorderLayout(0, 3));
     private final JLabel statusLabel = new JLabel();
     private final JLabel detailLabel = new JLabel();
+    private final JLabel detailLabel2 = new JLabel();
 
     public AttendanceFrame() {
         super("Attendance Buddy");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setContentPane(buildContent());
         setSize(1000, 620);
-        setMinimumSize(new Dimension(900, 580));
+        setMinimumSize(new Dimension(940, 580));
         setLocationRelativeTo(null);   // centre the window on the screen
     }
 
@@ -195,11 +196,21 @@ public class AttendanceFrame extends JFrame {
     /** The coloured bar that explains the current status. */
     private JPanel buildStatusPanel() {
         statusLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
+
         detailLabel.setFont(new Font("Segoe UI", Font.PLAIN, 13));
         detailLabel.setForeground(MUTED);
+        detailLabel2.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        detailLabel2.setForeground(MUTED);
+
+        // Two lines, so long messages never get cut off when the window is
+        // near its minimum size.
+        JPanel details = new JPanel(new GridLayout(2, 1, 0, 2));
+        details.setOpaque(false);
+        details.add(detailLabel);
+        details.add(detailLabel2);
 
         statusPanel.add(statusLabel, BorderLayout.NORTH);
-        statusPanel.add(detailLabel, BorderLayout.CENTER);
+        statusPanel.add(details, BorderLayout.CENTER);
         showNeutralStatus();
         return statusPanel;
     }
@@ -230,12 +241,12 @@ public class AttendanceFrame extends JFrame {
         } catch (NumberFormatException ex) {
             // Empty or non-numeric text.
             resetDashboard();
-            showErrorStatus("Please enter whole numbers for classes "
-                    + "and a number for the required percentage.");
+            showErrorStatus("Please enter valid numbers in all three fields.",
+                    "Classes must be whole numbers; the target can have decimals.");
         } catch (IllegalArgumentException ex) {
             // The engine rejected the values, for example absent > total.
             resetDashboard();
-            showErrorStatus(ex.getMessage());
+            showErrorStatus(ex.getMessage(), "");
         }
     }
 
@@ -284,44 +295,46 @@ public class AttendanceFrame extends JFrame {
 
         if (color == RED) {
             styleStatus("ATTENDANCE BELOW TARGET", RED, RED_TINT, String.format(
-                    "Attend %d consecutive %s to reach %.1f%%. "
-                    + "Remaining leave allowance is 0.",
+                    "Attend %d consecutive %s to reach %.1f%%.",
                     result.getClassesToRecover(),
                     classes(result.getClassesToRecover()),
-                    target));
+                    target),
+                    "Remaining leave allowance is 0.");
         } else if (color == YELLOW) {
             styleStatus("MAINTAIN ATTENDANCE", YELLOW, YELLOW_TINT, String.format(
-                    "You can still miss %d %s and stay at or above %.1f%%. "
-                    + "Do not skip too many in a row.",
+                    "You can still miss %d %s and stay at or above %.1f%%.",
                     result.getLeaveAllowance(),
                     classes(result.getLeaveAllowance()),
-                    target));
+                    target),
+                    "Do not skip too many classes in a row.");
         } else {
             styleStatus("SAFE", GREEN, GREEN_TINT, String.format(
-                    "You can still miss %d %s and stay above %.1f%%. "
-                    + "Your attendance has a comfortable buffer.",
+                    "You can still miss %d %s and stay above %.1f%%.",
                     result.getLeaveAllowance(),
                     classes(result.getLeaveAllowance()),
-                    target));
+                    target),
+                    "Your attendance has a comfortable buffer.");
         }
     }
 
     /** The state shown before the first calculation and after Clear. */
     private void showNeutralStatus() {
         styleStatus("READY", MUTED, PANEL,
-                "Enter your numbers, then press Calculate.");
+                "Enter your numbers, then press Calculate.", "");
     }
 
     /** Invalid input: red title with the engine's explanation. */
-    private void showErrorStatus(String message) {
-        styleStatus("CHECK YOUR INPUTS", RED, RED_TINT, message);
+    private void showErrorStatus(String message, String hint) {
+        styleStatus("CHECK YOUR INPUTS", RED, RED_TINT, message, hint);
     }
 
     /** Applies one consistent look to the status panel in every state. */
-    private void styleStatus(String title, Color color, Color background, String detail) {
+    private void styleStatus(String title, Color color, Color background,
+                             String detail, String detail2) {
         statusLabel.setText(title);
         statusLabel.setForeground(color);
         detailLabel.setText(detail);
+        detailLabel2.setText(detail2);
         statusPanel.setBackground(background);
         statusPanel.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createMatteBorder(0, 4, 0, 0, color),
