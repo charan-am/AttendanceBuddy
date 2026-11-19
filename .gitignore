@@ -1,0 +1,8 @@
+# Compiled output - never commit .class files
+out/
+*.class
+
+# IDE files (not part of the project)
+.idea/
+*.iml
+.vscode/
