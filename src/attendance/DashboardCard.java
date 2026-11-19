@@ -31,11 +31,11 @@ public class DashboardCard extends JPanel {
         setLayout(new BorderLayout(0, 6));
         setOpaque(false);          // we paint our own rounded background
         setBackground(CARD);
-        setBorder(BorderFactory.createEmptyBorder(14, 16, 14, 16));
+        setBorder(BorderFactory.createEmptyBorder(14, 14, 14, 14));
         setPreferredSize(new Dimension(150, 88));
 
         JLabel titleLabel = new JLabel(title);
-        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 10));
         titleLabel.setForeground(MUTED);
 
         valueLabel.setFont(new Font("Segoe UI", Font.BOLD, 26));

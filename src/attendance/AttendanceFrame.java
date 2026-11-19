@@ -29,15 +29,21 @@ public class AttendanceFrame extends JFrame {
     private static final Color BACKGROUND = new Color(24, 26, 32);
     private static final Color PANEL = new Color(34, 37, 46);
     private static final Color FIELD = new Color(45, 49, 60);
+    private static final Color BORDER = new Color(58, 63, 77);
     private static final Color TEXT = new Color(235, 238, 245);
     private static final Color MUTED = new Color(150, 158, 175);
+    private static final Color FOOTER_TEXT = new Color(110, 117, 133);
     private static final Color ACCENT = new Color(88, 166, 255);
-    private static final Color ERROR = new Color(255, 138, 128);
 
     // Status colours follow the required-target rule (see statusColor).
     private static final Color RED = new Color(239, 83, 80);
     private static final Color YELLOW = new Color(255, 193, 7);
     private static final Color GREEN = new Color(76, 175, 80);
+
+    // Soft background tints for the status panel.
+    private static final Color RED_TINT = new Color(52, 32, 36);
+    private static final Color YELLOW_TINT = new Color(54, 47, 26);
+    private static final Color GREEN_TINT = new Color(28, 47, 37);
 
     /** One engine object, reused for every calculation. */
     private final AttendanceCalculator calculator = new AttendanceCalculator();
@@ -51,40 +57,42 @@ public class AttendanceFrame extends JFrame {
     private final AttendanceGauge gauge = new AttendanceGauge();
     private final DashboardCard totalCard = new DashboardCard("TOTAL CLASSES");
     private final DashboardCard attendedCard = new DashboardCard("ATTENDED");
-    private final DashboardCard absentCard = new DashboardCard("ABSENT / BUNKED");
+    private final DashboardCard absentCard = new DashboardCard("ABSENT");
     private final DashboardCard allowanceCard = new DashboardCard("CAN STILL MISS");
 
-    private final JLabel messageLabel =
-            new JLabel("Enter your numbers, then press Calculate.");
+    // Status panel: a coloured title and a one-line explanation.
+    private final JPanel statusPanel = new JPanel(new BorderLayout(0, 3));
+    private final JLabel statusLabel = new JLabel();
+    private final JLabel detailLabel = new JLabel();
 
     public AttendanceFrame() {
         super("Attendance Buddy");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setContentPane(buildContent());
-        setSize(980, 600);
-        setMinimumSize(new Dimension(880, 560));
+        setSize(1000, 620);
+        setMinimumSize(new Dimension(900, 580));
         setLocationRelativeTo(null);   // centre the window on the screen
     }
 
-    /** Builds the header, the input card, the dashboard and the message bar. */
+    /** Builds the header, the main area (inputs + results) and the footer. */
     private JPanel buildContent() {
-        JPanel root = new JPanel(new BorderLayout(0, 18));
+        JPanel root = new JPanel(new BorderLayout(0, 16));
         root.setBackground(BACKGROUND);
-        root.setBorder(BorderFactory.createEmptyBorder(22, 26, 22, 26));
-
-        messageLabel.setForeground(MUTED);
-        messageLabel.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        root.setBorder(BorderFactory.createEmptyBorder(22, 26, 18, 26));
 
         root.add(buildHeader(), BorderLayout.NORTH);
         root.add(buildMainArea(), BorderLayout.CENTER);
-        root.add(messageLabel, BorderLayout.SOUTH);
+        root.add(buildFooter(), BorderLayout.SOUTH);
         return root;
     }
 
-    /** Title and one-line subtitle. */
+    /** Title and one-line subtitle, with a thin separator underneath. */
     private JPanel buildHeader() {
         JPanel header = new JPanel(new GridLayout(2, 1, 0, 4));
         header.setBackground(BACKGROUND);
+        header.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(42, 46, 57)),
+                BorderFactory.createEmptyBorder(0, 0, 14, 0)));
 
         JLabel title = new JLabel("Attendance Buddy");
         title.setFont(new Font("Segoe UI", Font.BOLD, 26));
@@ -100,7 +108,7 @@ public class AttendanceFrame extends JFrame {
         return header;
     }
 
-    /** Inputs on the left, gauge and result cards on the right. */
+    /** Inputs on the left, gauge, cards and status panel on the right. */
     private JPanel buildMainArea() {
         JPanel main = new JPanel(new BorderLayout(18, 0));
         main.setBackground(BACKGROUND);
@@ -108,10 +116,10 @@ public class AttendanceFrame extends JFrame {
         JPanel inputWrapper = new JPanel(new BorderLayout());
         inputWrapper.setBackground(BACKGROUND);
         inputWrapper.setPreferredSize(new Dimension(330, 0));
-        inputWrapper.add(buildForm(), BorderLayout.CENTER);
+        inputWrapper.add(buildForm(), BorderLayout.NORTH);
 
         main.add(inputWrapper, BorderLayout.WEST);
-        main.add(buildDashboard(), BorderLayout.CENTER);
+        main.add(buildResults(), BorderLayout.CENTER);
         return main;
     }
 
@@ -119,7 +127,7 @@ public class AttendanceFrame extends JFrame {
     private JPanel buildForm() {
         JPanel form = new JPanel(new BorderLayout(0, 16));
         form.setBackground(PANEL);
-        form.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+        form.setBorder(BorderFactory.createEmptyBorder(18, 20, 20, 20));
 
         JPanel inputs = new JPanel(new GridLayout(3, 2, 12, 12));
         inputs.setBackground(PANEL);
@@ -129,7 +137,16 @@ public class AttendanceFrame extends JFrame {
         inputs.add(fieldFor(absentField));
         inputs.add(labelFor("Required (%)"));
         inputs.add(fieldFor(targetField));
-        form.add(inputs, BorderLayout.CENTER);
+
+        JLabel formTitle = new JLabel("ENTER YOUR NUMBERS");
+        formTitle.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        formTitle.setForeground(MUTED);
+
+        JPanel formTop = new JPanel(new BorderLayout(0, 12));
+        formTop.setBackground(PANEL);
+        formTop.add(formTitle, BorderLayout.NORTH);
+        formTop.add(inputs, BorderLayout.CENTER);
+        form.add(formTop, BorderLayout.NORTH);
 
         JPanel buttons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         buttons.setBackground(PANEL);
@@ -145,15 +162,18 @@ public class AttendanceFrame extends JFrame {
         return form;
     }
 
-    /** Gauge on the left, four result cards in a 2 x 2 grid on the right. */
-    private JPanel buildDashboard() {
-        JPanel dashboard = new JPanel(new BorderLayout(18, 0));
-        dashboard.setBackground(BACKGROUND);
+    /** Gauge and cards on top, the status message underneath. */
+    private JPanel buildResults() {
+        JPanel results = new JPanel(new BorderLayout(0, 14));
+        results.setBackground(BACKGROUND);
+
+        JPanel topRow = new JPanel(new BorderLayout(18, 0));
+        topRow.setBackground(BACKGROUND);
 
         JPanel gaugeHolder = new JPanel(new BorderLayout());
         gaugeHolder.setBackground(BACKGROUND);
         gaugeHolder.add(gauge, BorderLayout.CENTER);
-        dashboard.add(gaugeHolder, BorderLayout.WEST);
+        topRow.add(gaugeHolder, BorderLayout.WEST);
 
         JPanel cards = new JPanel(new GridLayout(2, 2, 12, 12));
         cards.setBackground(BACKGROUND);
@@ -165,8 +185,36 @@ public class AttendanceFrame extends JFrame {
         JPanel cardHolder = new JPanel(new BorderLayout());
         cardHolder.setBackground(BACKGROUND);
         cardHolder.add(cards, BorderLayout.CENTER);
-        dashboard.add(cardHolder, BorderLayout.CENTER);
-        return dashboard;
+        topRow.add(cardHolder, BorderLayout.CENTER);
+
+        results.add(topRow, BorderLayout.CENTER);
+        results.add(buildStatusPanel(), BorderLayout.SOUTH);
+        return results;
+    }
+
+    /** The coloured bar that explains the current status. */
+    private JPanel buildStatusPanel() {
+        statusLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        detailLabel.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        detailLabel.setForeground(MUTED);
+
+        statusPanel.add(statusLabel, BorderLayout.NORTH);
+        statusPanel.add(detailLabel, BorderLayout.CENTER);
+        showNeutralStatus();
+        return statusPanel;
+    }
+
+    /** A small, quiet credit line at the bottom of the window. */
+    private JPanel buildFooter() {
+        JPanel footer = new JPanel(new BorderLayout());
+        footer.setBackground(BACKGROUND);
+
+        JLabel credit = new JLabel("Built by Charan AM");
+        credit.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+        credit.setForeground(FOOTER_TEXT);
+
+        footer.add(credit, BorderLayout.EAST);
+        return footer;
     }
 
     /** Reads the fields, asks the engine, shows the answer. */
@@ -178,22 +226,16 @@ public class AttendanceFrame extends JFrame {
 
             AttendanceResult result = calculator.calculate(total, absent, target);
             updateDashboard(result);
-
-            messageLabel.setForeground(statusColor(result));
-            messageLabel.setText(String.format(
-                    "%s attendance  ·  %d of %d attended  ·  %d classes can still be missed",
-                    result.getPercentageText(),
-                    result.getAttendedClasses(),
-                    result.getTotalClasses(),
-                    result.getLeaveAllowance()));
+            showResultStatus(result);
         } catch (NumberFormatException ex) {
             // Empty or non-numeric text.
             resetDashboard();
-            showError("Please enter whole numbers for classes and a number for the target.");
+            showErrorStatus("Please enter whole numbers for classes "
+                    + "and a number for the required percentage.");
         } catch (IllegalArgumentException ex) {
             // The engine rejected the values, for example absent > total.
             resetDashboard();
-            showError(ex.getMessage());
+            showErrorStatus(ex.getMessage());
         }
     }
 
@@ -235,20 +277,70 @@ public class AttendanceFrame extends JFrame {
         return GREEN;
     }
 
-    /** Empties the fields and restores the default target. */
+    /** Chooses the status text, colour and tint that belong to the result. */
+    private void showResultStatus(AttendanceResult result) {
+        Color color = statusColor(result);
+        double target = result.getTargetPercentage();
+
+        if (color == RED) {
+            styleStatus("ATTENDANCE BELOW TARGET", RED, RED_TINT, String.format(
+                    "Attend %d consecutive %s to reach %.1f%%. "
+                    + "Remaining leave allowance is 0.",
+                    result.getClassesToRecover(),
+                    classes(result.getClassesToRecover()),
+                    target));
+        } else if (color == YELLOW) {
+            styleStatus("MAINTAIN ATTENDANCE", YELLOW, YELLOW_TINT, String.format(
+                    "You can still miss %d %s and stay at or above %.1f%%. "
+                    + "Do not skip too many in a row.",
+                    result.getLeaveAllowance(),
+                    classes(result.getLeaveAllowance()),
+                    target));
+        } else {
+            styleStatus("SAFE", GREEN, GREEN_TINT, String.format(
+                    "You can still miss %d %s and stay above %.1f%%. "
+                    + "Your attendance has a comfortable buffer.",
+                    result.getLeaveAllowance(),
+                    classes(result.getLeaveAllowance()),
+                    target));
+        }
+    }
+
+    /** The state shown before the first calculation and after Clear. */
+    private void showNeutralStatus() {
+        styleStatus("READY", MUTED, PANEL,
+                "Enter your numbers, then press Calculate.");
+    }
+
+    /** Invalid input: red title with the engine's explanation. */
+    private void showErrorStatus(String message) {
+        styleStatus("CHECK YOUR INPUTS", RED, RED_TINT, message);
+    }
+
+    /** Applies one consistent look to the status panel in every state. */
+    private void styleStatus(String title, Color color, Color background, String detail) {
+        statusLabel.setText(title);
+        statusLabel.setForeground(color);
+        detailLabel.setText(detail);
+        statusPanel.setBackground(background);
+        statusPanel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createMatteBorder(0, 4, 0, 0, color),
+                BorderFactory.createEmptyBorder(12, 16, 12, 16)));
+    }
+
+    /** "1 class" reads better than "1 classes". */
+    private String classes(int count) {
+        return count == 1 ? "class" : "classes";
+    }
+
+    /** Empties the fields, restores the default target and clears results. */
     private void onClear() {
         totalField.setText("");
         absentField.setText("");
         targetField.setText("75");
         resetDashboard();
-        messageLabel.setForeground(MUTED);
-        messageLabel.setText("Enter your numbers, then press Calculate.");
+        showNeutralStatus();
         totalField.requestFocusInWindow();
-    }
-
-    private void showError(String message) {
-        messageLabel.setForeground(ERROR);
-        messageLabel.setText(message);
     }
 
     // --- Small helpers that keep the build methods short and consistent ---
@@ -266,7 +358,7 @@ public class AttendanceFrame extends JFrame {
         field.setCaretColor(TEXT);
         field.setFont(new Font("Segoe UI", Font.PLAIN, 14));
         field.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(58, 63, 77)),
+                BorderFactory.createLineBorder(BORDER),
                 BorderFactory.createEmptyBorder(8, 10, 8, 10)));
         return field;
     }
