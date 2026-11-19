@@ -31,7 +31,7 @@ src/attendance/
 javac -d out src\attendance\*.java
 ```
 
-## Run
+## Run (after Stage 3)
 
 ```bat
 java -cp out attendance.AttendanceFrame
